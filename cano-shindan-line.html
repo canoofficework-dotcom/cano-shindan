@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cano | セルフ診断</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --kinari:#F2EBDD; --kinari-deep:#E8DFCB;
+    --ai:#26344A; --ai-soft:#3E4F68;
+    --kaki:#A8563C; --kaki-soft:#C97C60;
+    --koji:#C9A227; --moss:#7A8B69; --sumi:#33302A; --white:#FFFDF8;
+    --radius:20px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 15% 10%, rgba(201,162,39,0.10), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(168,86,60,0.10), transparent 45%),
+      var(--kinari);
+    color:var(--sumi);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    min-height:100vh;
+    display:flex; justify-content:center;
+    padding:24px 14px 60px;
+  }
+  #app{width:100%; max-width:460px;}
+  header.brand{text-align:center; margin-bottom:18px;}
+  header.brand .mark{font-family:'Shippori Mincho', serif; font-size:13px; letter-spacing:0.35em; color:var(--kaki); font-weight:700;}
+  header.brand h1{font-family:'Shippori Mincho', serif; font-size:21px; font-weight:700; margin:6px 0 2px; color:var(--ai);}
+  header.brand p{font-size:12px; color:var(--ai-soft); margin:0;}
+
+  .seiro{display:flex; justify-content:center; gap:10px; margin:18px 0 20px;}
+  .seiro .layer{position:relative; width:50px; height:50px;}
+  .seiro svg{width:100%; height:100%; transform:rotate(-90deg);}
+  .seiro circle.track{fill:none; stroke:var(--kinari-deep); stroke-width:6;}
+  .seiro circle.prog{fill:none; stroke:var(--kaki); stroke-width:6; stroke-linecap:round; transition:stroke-dashoffset .5s ease;}
+  .seiro .label{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Shippori Mincho',serif; font-size:12px; font-weight:700; color:var(--ai);}
+  .seiro .layer.done circle.prog{stroke:var(--moss);}
+
+  .card{background:var(--white); border-radius:var(--radius); padding:26px 22px; box-shadow:0 10px 30px rgba(51,48,42,0.08); border:1px solid rgba(51,48,42,0.06);}
+  .screen{display:none;}
+  .screen.active{display:block; animation:fade .35s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  h2.section-title{font-family:'Shippori Mincho', serif; font-size:18px; color:var(--ai); margin:0 0 4px;}
+  .section-sub{font-size:12px; color:var(--ai-soft); margin:0 0 18px; line-height:1.6;}
+  .qcount{font-family:'Space Mono', monospace; font-size:12px; color:var(--kaki); letter-spacing:0.05em; margin-bottom:10px;}
+  .question{font-size:17px; line-height:1.7; color:var(--sumi); margin:0 0 26px; min-height:70px;}
+  .yesno{display:flex; gap:12px;}
+  .yesno button{flex:1; padding:16px 0; border-radius:14px; border:2px solid var(--ai); background:var(--white); color:var(--ai); font-size:16px; font-weight:700; font-family:'Zen Kaku Gothic New',sans-serif; cursor:pointer; transition:transform .12s ease, background .12s ease, color .12s ease;}
+  .yesno button:active{transform:scale(0.97);}
+  .yesno button.yes:hover{background:var(--ai); color:var(--white);}
+  .yesno button.no:hover{background:var(--kaki); color:var(--white); border-color:var(--kaki);}
+  .yesno button:focus-visible{outline:3px solid var(--koji); outline-offset:2px;}
+
+  label{display:block; font-size:13px; color:var(--ai-soft); margin:14px 0 6px;}
+  input[type=number], select, input[type=text]{width:100%; padding:12px 14px; border-radius:12px; border:1.5px solid var(--kinari-deep); background:var(--kinari); font-size:15px; font-family:'Zen Kaku Gothic New',sans-serif; color:var(--sumi);}
+  input:focus-visible, select:focus-visible{outline:3px solid var(--koji); outline-offset:1px;}
+
+  .primary-btn{width:100%; margin-top:20px; padding:15px 0; border-radius:14px; border:none; background:var(--kaki); color:var(--white); font-size:15px; font-weight:700; font-family:'Zen Kaku Gothic New',sans-serif; cursor:pointer;}
+  .primary-btn:hover{background:var(--kaki-soft);}
+  .primary-btn:disabled{opacity:0.5; cursor:not-allowed;}
+  .ghost-btn{width:100%; margin-top:10px; padding:12px 0; border-radius:14px; border:1.5px solid var(--ai-soft); background:transparent; color:var(--ai-soft); font-size:13px; font-family:'Zen Kaku Gothic New',sans-serif; cursor:pointer;}
+
+  .choice-card{border:1.5px solid var(--kinari-deep); border-radius:16px; padding:18px; margin-bottom:12px; cursor:pointer; transition:border-color .15s ease, background .15s ease;}
+  .choice-card:hover{border-color:var(--kaki); background:rgba(168,86,60,0.04);}
+  .choice-card h3{font-family:'Shippori Mincho',serif; font-size:16px; margin:0 0 4px; color:var(--ai);}
+  .choice-card p{font-size:12px; color:var(--ai-soft); margin:0; line-height:1.6;}
+
+  .result-hero{text-align:center; padding:22px 10px; background:linear-gradient(135deg, rgba(168,86,60,0.08), rgba(122,139,105,0.08)); border-radius:16px; margin-bottom:18px;}
+  .result-hero .kcal{font-family:'Space Mono', monospace; font-size:38px; font-weight:700; color:var(--ai);}
+  .result-hero .kcal span{font-size:15px; margin-left:4px; color:var(--ai-soft);}
+  .result-hero .kcal-label{font-size:12px; color:var(--ai-soft); letter-spacing:0.05em;}
+  .pfc-grid{display:flex; gap:10px; margin-bottom:18px;}
+  .pfc-grid .box{flex:1; background:var(--kinari); border-radius:12px; padding:12px 8px; text-align:center;}
+  .pfc-grid .box .n{font-family:'Space Mono',monospace; font-size:18px; font-weight:700; color:var(--kaki);}
+  .pfc-grid .box .t{font-size:11px; color:var(--ai-soft); margin-top:2px;}
+  .diag-box{background:var(--ai); color:var(--kinari); border-radius:14px; padding:16px 18px; font-size:13.5px; line-height:1.8; margin-bottom:14px;}
+  .diag-box b{color:var(--koji);}
+  .exercise-box{border:1.5px dashed var(--kaki-soft); border-radius:14px; padding:16px 18px; font-size:13.5px; line-height:1.8; margin-bottom:14px; color:var(--sumi);}
+  .keyword-tag{display:inline-block; background:var(--koji); color:var(--white); font-family:'Space Mono',monospace; font-weight:700; padding:6px 14px; border-radius:20px; font-size:13px; margin-top:8px;}
+  .disclaimer{font-size:11px; color:var(--ai-soft); line-height:1.6; margin-top:10px;}
+
+  .upload-box{border:2px dashed var(--kinari-deep); border-radius:16px; padding:26px 16px; text-align:center; cursor:pointer; transition:border-color .15s ease;}
+  .upload-box:hover{border-color:var(--kaki);}
+  .upload-box img{max-width:100%; border-radius:12px; margin-top:10px;}
+  .upload-box .hint{font-size:13px; color:var(--ai-soft); margin-top:8px;}
+  .loading{display:flex; align-items:center; gap:8px; justify-content:center; padding:20px 0; font-size:13px; color:var(--ai-soft);}
+  .spinner{width:16px; height:16px; border:2.5px solid var(--kinari-deep); border-top-color:var(--kaki); border-radius:50%; animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion: reduce){.spinner{animation:none;} .screen.active{animation:none;}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="brand">
+    <div class="mark">CANO ・ 発酵ダイエット</div>
+    <h1>セルフ診断</h1>
+    <p>今の自分を、一番好きと言えるように</p>
+  </header>
+
+  <div class="seiro" id="seiroRings" style="display:none;"></div>
+
+  <div class="card">
+
+    <!-- Screen: onboarding -->
+    <div class="screen active" id="s-start">
+      <h2 class="section-title">まずは基本情報を</h2>
+      <p class="section-sub">PFCバランスと目安カロリーの計算だけに使います。保存はされません。</p>
+      <p class="section-sub" style="color:var(--kaki); font-weight:700;">※この計算式は女性を対象としています。</p>
+      <label>年齢</label>
+      <input type="number" id="in-age" value="40" min="18" max="90">
+      <label>身長 (cm)</label>
+      <input type="number" id="in-height" value="158" min="120" max="200">
+      <label>現在の体重 (kg)</label>
+      <input type="number" id="in-weight" value="58" min="30" max="150" step="0.1">
+      <label>ふだんの活動量</label>
+      <select id="in-activity">
+        <option value="low">低い（生活の大部分が座位で静的な活動が中心）</option>
+        <option value="normal" selected>普通（通勤・買い物・家事・軽いスポーツなどを含む）</option>
+        <option value="high">高い（立位や移動の多い仕事、活発な運動習慣がある）</option>
+      </select>
+      <button class="primary-btn" onclick="startQuiz()">診断をはじめる</button>
+    </div>
+
+    <!-- Screen: quiz -->
+    <div class="screen" id="s-quiz">
+      <h2 class="section-title" id="quizTitle"></h2>
+      <p class="section-sub" id="quizSub"></p>
+      <div class="qcount" id="quizCount"></div>
+      <div class="question" id="quizQuestion"></div>
+      <div class="yesno">
+        <button class="yes" onclick="answer(true)">YES</button>
+        <button class="no" onclick="answer(false)">NO</button>
+      </div>
+    </div>
+
+    <!-- Screen: result -->
+    <div class="screen" id="s-result">
+      <h2 class="section-title">診断結果</h2>
+      <div class="result-hero">
+        <div class="kcal-label">① 現体重における推定エネルギー量</div>
+        <div class="kcal" id="outKcalNow">--<span>kcal/日</span></div>
+      </div>
+      <div class="result-hero" style="background:linear-gradient(135deg, rgba(122,139,105,0.10), rgba(201,162,39,0.10));">
+        <div class="kcal-label">② 標準体重（<span id="outStdWeight">--</span>kg）における推定エネルギー量</div>
+        <div class="kcal" id="outKcalStd">--<span>kcal/日</span></div>
+      </div>
+      <div class="diag-box" id="outMetabolism" style="background:var(--kaki);"></div>
+      <div class="diag-box" id="outDiag"></div>
+      <div class="exercise-box" id="outExercise"></div>
+      <p class="disclaimer">※これは一般的な栄養学の計算式による目安です。持病や通院中の方、体調に不安がある場合は医師・管理栄養士にご相談ください。</p>
+      <button class="primary-btn" onclick="location.reload()">もう一度診断する</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ==== 診断ロジック ====
+const SECTIONS = [
+  {
+    key:'diet', title:'食事習慣チェック', sub:'ここ最近のふだんの様子で答えてください。',
+    questions:[
+      {q:'朝食を抜くことが多い', risk:true},
+      {q:'ご飯やパンなど主食を極端に減らしている', risk:true},
+      {q:'21時以降に夕食をとることが多い', risk:true},
+      {q:'甘いお菓子や間食が毎日の習慣になっている', risk:true},
+      {q:'揚げ物や脂っこい料理を週に4回以上食べる', risk:true},
+      {q:'野菜より先にご飯やパンから食べ始めることが多い', risk:true},
+    ]
+  },
+  {
+    key:'life', title:'生活習慣チェック', sub:'睡眠・体の動かし方について答えてください。',
+    questions:[
+      {q:'睡眠時間は6時間未満のことが多い', risk:true},
+      {q:'湯船に浸からずシャワーだけで済ませることが多い', risk:true},
+      {q:'1日の大半を座って過ごしている', risk:true},
+      {q:'ストレスを感じると食べて発散することが多い', risk:true},
+      {q:'週に2回以上、意識的に体を動かす時間がある', risk:false},
+      {q:'水分補給は水やお茶よりジュースやコーヒーが多い', risk:true},
+    ]
+  },
+  {
+    key:'posture', title:'姿勢タイプ診断', sub:'当てはまるものに答えてください。',
+    questions:[
+      {q:'1日6時間以上スマホやPCの画面を見ている', type:'shoulder'},
+      {q:'気づくと肩が耳に近づくように上がっている', type:'shoulder'},
+      {q:'頭痛や目の疲れを感じやすい', type:'shoulder'},
+      {q:'座っているとき、あごが前に出ていることが多い', type:'neck'},
+      {q:'首の後ろがいつも張っている感じがする', type:'neck'},
+      {q:'枕が合わないと首や肩がつらくなる', type:'neck'},
+      {q:'長時間座ると腰が重だるくなる', type:'back'},
+      {q:'反り腰だと言われたことがある', type:'back'},
+      {q:'靴のかかとが片減りしやすい', type:'back'},
+      {q:'座り仕事の時間が長い', type:'hip'},
+      {q:'お尻の丸みが分かりにくく、四角い印象だと感じる', type:'hip'},
+      {q:'立っているとき膝が内側に入りやすい', type:'hip'},
+    ]
+  }
+];
+
+const POSTURE_INFO = {
+  shoulder:{
+    name:'肩こりタイプ',
+    desc:'スマホ・PC姿勢で肩甲骨まわりが固まりやすいタイプです。まずは「肩甲骨はがし」で肩まわりの可動域を戻すのがおすすめです。',
+    keyword:'肩こり動画'
+  },
+  neck:{
+    name:'ストレートネックタイプ',
+    desc:'頭が前に出て首の後ろに負担がかかりやすいタイプです。「あご引きエクササイズ」で首の自然なカーブを取り戻すのがおすすめです。',
+    keyword:'ストレートネック動画'
+  },
+  back:{
+    name:'腰痛タイプ',
+    desc:'骨盤が前に傾きやすく、腰まわりに負担が集中しやすいタイプです。「骨盤ニュートラルストレッチ」で腰の反りをリセットするのがおすすめです。',
+    keyword:'腰痛動画'
+  },
+  hip:{
+    name:'四角尻タイプ',
+    desc:'座り時間が長くお尻の筋肉が使えていないタイプです。「ヒップリフト」でお尻の丸みを育てるのがおすすめです。',
+    keyword:'美尻動画'
+  }
+};
+
+let profile = {};
+let sIdx = 0, qIdx = 0;
+let answers = {diet:[], life:[], posture:[]};
+
+function renderRings(){
+  const box = document.getElementById('seiroRings');
+  const inQuiz = document.getElementById('s-quiz').classList.contains('active') || document.getElementById('s-result').classList.contains('active');
+  box.style.display = inQuiz ? 'flex' : 'none';
+  if(!inQuiz) return;
+  box.innerHTML = '';
+  const labels = ['食','生','姿'];
+  for(let i=0;i<3;i++){
+    const pct = i < sIdx ? 1 : (i === sIdx ? (qIdx/(SECTIONS[i]?.questions.length||1)) : 0);
+    const r = 21, c = 2*Math.PI*r;
+    const offset = c - pct*c;
+    const done = i < sIdx || document.getElementById('s-result').classList.contains('active');
+    box.innerHTML += `<div class="layer ${done?'done':''}">
+      <svg viewBox="0 0 50 50">
+        <circle class="track" cx="25" cy="25" r="${r}"/>
+        <circle class="prog" cx="25" cy="25" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${offset}"/>
+      </svg>
+      <div class="label">${labels[i]}</div>
+    </div>`;
+  }
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  renderRings();
+}
+
+function startQuiz(){
+  profile = {
+    age: parseFloat(document.getElementById('in-age').value)||40,
+    height: parseFloat(document.getElementById('in-height').value)||158,
+    weight: parseFloat(document.getElementById('in-weight').value)||58,
+    activityLevel: document.getElementById('in-activity').value||'normal',
+  };
+  sIdx = 0; qIdx = 0;
+  answers = {diet:[], life:[], posture:[]};
+  showScreen('s-quiz');
+  renderQuestion();
+}
+
+function renderQuestion(){
+  const sec = SECTIONS[sIdx];
+  document.getElementById('quizTitle').textContent = sec.title;
+  document.getElementById('quizSub').textContent = sec.sub;
+  document.getElementById('quizCount').textContent = `Q${qIdx+1} / ${sec.questions.length}`;
+  document.getElementById('quizQuestion').textContent = sec.questions[qIdx].q;
+}
+
+function answer(val){
+  answers[SECTIONS[sIdx].key].push(val);
+  qIdx++;
+  if(qIdx >= SECTIONS[sIdx].questions.length){
+    sIdx++; qIdx = 0;
+    if(sIdx >= SECTIONS.length){ computeResult(); showScreen('s-result'); return; }
+  }
+  renderRings();
+  renderQuestion();
+}
+
+// 基礎代謝基準値（kcal/kg体重/日）女性・年代別
+// 出典：厚生労働省「日本人の食事摂取基準」に基づく標準的な基礎代謝基準値表
+function getBmrBasePerKg(age){
+  if(age <= 2) return 59.7;
+  if(age <= 5) return 52.2;
+  if(age <= 7) return 41.9;
+  if(age <= 9) return 38.3;
+  if(age <= 11) return 34.8;
+  if(age <= 14) return 29.6;
+  if(age <= 17) return 25.3;
+  if(age <= 29) return 22.1;
+  if(age <= 49) return 21.9;
+  if(age <= 64) return 20.7;
+  if(age <= 74) return 20.7;
+  return 20.7;
+}
+
+// 身体活動レベル指数（メディカルズ本舗の基準：低い1.5／普通1.75／高い2.0、70歳以上は1.3／1.5／1.7）
+function getActivityIndex(level, age){
+  const table70 = {low:1.3, normal:1.5, high:1.7};
+  const tableUnder70 = {low:1.5, normal:1.75, high:2.0};
+  return age >= 70 ? table70[level] : tableUnder70[level];
+}
+
+function computeResult(){
+  const {age, height, weight, activityLevel} = profile;
+  const heightM = height / 100;
+  const standardWeight = Math.round(heightM * heightM * 22 * 10) / 10;
+
+  const bmrBase = getBmrBasePerKg(age);
+  const activityIndex = getActivityIndex(activityLevel, age);
+
+  const bmrNow = bmrBase * weight;
+  const bmrStd = bmrBase * standardWeight;
+  const kcalNow = Math.round(bmrNow * activityIndex);
+  const kcalStd = Math.round(bmrStd * activityIndex);
+
+  document.getElementById('outKcalNow').innerHTML = `${kcalNow}<span>kcal/日</span>`;
+  document.getElementById('outStdWeight').textContent = standardWeight;
+  document.getElementById('outKcalStd').innerHTML = `${kcalStd}<span>kcal/日</span>`;
+
+  document.getElementById('outMetabolism').innerHTML =
+    `<b>①の${kcalNow}kcalは、本来あなたの年齢・体格なら「消費できて当然」の量</b>です。もし普段の食事量がこれより少ないのに体重が増えている・落ちにくいと感じるなら、食べすぎではなく基礎代謝が落ちているサインかもしれません（40代以降によくある現象です）。<br><br>
+    ゴールはいきなり②まで減らすことではなく、①から少しずつ②の水準に近づけていくことです。その際、<b>炭水化物6：脂質2：タンパク質2のバランス</b>を保つことが重要です。カロリーを減らす時も、この比率が崩れないようにしましょう。`;
+
+  const dietRisk = answers.diet.filter((a,i)=> a === SECTIONS[0].questions[i].risk).length;
+  const lifeRisk = answers.life.filter((a,i)=> a === SECTIONS[1].questions[i].risk).length;
+  let diagText = '';
+  if(dietRisk >= lifeRisk && dietRisk > 0){
+    diagText = `今回の答えから見ると、<b>食事の摂り方</b>に伸びしろがありそうです（該当 ${dietRisk}/6）。食べる時間帯や間食の習慣を、ゆるやかに整えていきましょう。`;
+  } else if(lifeRisk > 0){
+    diagText = `今回の答えから見ると、<b>生活習慣（睡眠・体の動かし方）</b>に伸びしろがありそうです（該当 ${lifeRisk}/6）。食事だけでなく、眠りと動きも一緒に見直すと変化が出やすいタイプです。`;
+  } else {
+    diagText = `今のところ大きな崩れは見当たりません。今の良い習慣を保ちながら、麹×せいろの食事でさらに整えていきましょう。`;
+  }
+  document.getElementById('outDiag').innerHTML = diagText;
+
+  const t = {shoulder:0, neck:0, back:0, hip:0};
+  SECTIONS[2].questions.forEach((q,i)=>{ if(answers.posture[i]) t[q.type]++; });
+  const top = Object.keys(t).reduce((a,b)=> t[a]>=t[b]?a:b);
+  const info = POSTURE_INFO[top];
+  document.getElementById('outExercise').innerHTML =
+    `<b style="color:var(--kaki);">あなたは「${info.name}」</b><br>${info.desc}<br>
+     公式LINEに下の合言葉を送ると、動画をプレゼントします👇<br>
+     <span class="keyword-tag">${info.keyword}</span>`;
+}
+
+renderRings();
+</script>
+</body>
+</html>
